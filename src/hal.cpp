@@ -167,6 +167,9 @@ int serial_read() {
 // stopped); here the speed never goes below FAN_MIN_SPEED.
 constexpr uint16_t FAN_PWM_WRAP = 1023;
 constexpr uint32_t FAN_PWM_HZ = 9766;  // PIC: 10 MHz / 4 / 256 (PR2 = 0xFF)
+// From the build's system clock (SYS_CLK_HZ, set with -DSYS_CLK_HZ / SYS_CLK_MHZ)
+constexpr float FAN_PWM_CLKDIV = static_cast<float>(SYS_CLK_HZ) / (FAN_PWM_HZ * (FAN_PWM_WRAP + 1));
+static_assert(FAN_PWM_CLKDIV >= 1.0f && FAN_PWM_CLKDIV < 256.0f, "Fan PWM divider out of range for SYS_CLK_HZ");
 
 static uint8_t fan_speed_set = 0xFF;
 
@@ -289,7 +292,7 @@ void init() {
   pwm_slice = pwm_gpio_to_slice_num(pins::FAN_PWM1);
   pwm_channel = pwm_gpio_to_channel(pins::FAN_PWM1);
   pwm_config pwm_cfg = pwm_get_default_config();
-  pwm_config_set_clkdiv(&pwm_cfg, static_cast<float>(clock_get_hz(clk_sys)) / (FAN_PWM_HZ * (FAN_PWM_WRAP + 1)));
+  pwm_config_set_clkdiv(&pwm_cfg, FAN_PWM_CLKDIV);
   pwm_config_set_wrap(&pwm_cfg, FAN_PWM_WRAP);
   pwm_init(pwm_slice, &pwm_cfg, false);
   fan_pin_low();
@@ -324,8 +327,7 @@ void petWatchdog() {
 
 // Main loop tick, same as the PIC's Timer1: timer1_init() starts a period,
 // timer1_wait() blocks until it has elapsed (returns at once if it already
-// has) and starts the next one. It sleeps (WFE on a timer alarm) rather than
-// spinning; interrupts (SMBus, POWER_OK, USB) still run while it waits.
+// has) and starts the next one.
 static uint32_t        timer1_period_us = TICK_US;
 static absolute_time_t timer1_deadline;
 
@@ -335,7 +337,7 @@ void timer1_init(uint32_t delay_us) {
 }
 
 void timer1_wait() {
-  sleep_until(timer1_deadline);
+  busy_wait_until(timer1_deadline);
   timer1_init(timer1_period_us);
 }
 

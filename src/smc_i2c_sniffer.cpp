@@ -110,7 +110,9 @@ void init() {
   // Sample every ~200 ns (3 instructions at 15 MHz): fine enough for 100 kHz
   // SMBus timing (300 ns data hold), coarse enough to ride out ringing on the
   // slow edges
-  sm_config_set_clkdiv(&c, static_cast<float>(clock_get_hz(clk_sys)) / 15000000.0f);
+  constexpr float clkdiv = static_cast<float>(SYS_CLK_HZ) / 15000000.0f;
+  static_assert(clkdiv >= 1.0f && clkdiv < 65536.0f, "Sniffer PIO divider out of range for SYS_CLK_HZ");
+  sm_config_set_clkdiv(&c, clkdiv);
   pio_sm_init(pio, sm, offset + wrap_target, &c);
 
   dma_channel = dma_claim_unused_channel(false);

@@ -54,9 +54,12 @@ static void updateLitLeds() {
 
 // Starts the pin's PWM slice at the LED rate, off. Inverted for the active low
 // front panel LEDs.
+constexpr float LED_PWM_CLKDIV = static_cast<float>(SYS_CLK_HZ) / (LED_PWM_HZ * (LED_PWM_WRAP + 1));
+static_assert(LED_PWM_CLKDIV >= 1.0f && LED_PWM_CLKDIV < 256.0f, "LED PWM divider out of range for SYS_CLK_HZ");
+
 static void initLedPwm(const uint8_t pin, const bool inverted) {
   pwm_config cfg = pwm_get_default_config();
-  pwm_config_set_clkdiv(&cfg, static_cast<float>(clock_get_hz(clk_sys)) / (LED_PWM_HZ * (LED_PWM_WRAP + 1)));
+  pwm_config_set_clkdiv(&cfg, LED_PWM_CLKDIV);
   pwm_config_set_wrap(&cfg, LED_PWM_WRAP);
   pwm_config_set_output_polarity(&cfg, inverted, inverted);
   pwm_init(pwm_gpio_to_slice_num(pin), &cfg, true);

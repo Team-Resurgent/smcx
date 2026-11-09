@@ -30,8 +30,10 @@ static inline void ws2812_program_init(PIO pio, uint sm, uint offset, uint pin) 
     sm_config_set_sideset_pins(&c, pin);
     sm_config_set_out_shift(&c, false, true, 24);
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
-    const int cycles_per_bit = ws2812_T1 + ws2812_T2 + ws2812_T3;
-    sm_config_set_clkdiv(&c, static_cast<float>(clock_get_hz(clk_sys)) / (800000.0f * cycles_per_bit));
+    constexpr int   cycles_per_bit = ws2812_T1 + ws2812_T2 + ws2812_T3;
+    constexpr float clkdiv = static_cast<float>(SYS_CLK_HZ) / (800000.0f * cycles_per_bit);
+    static_assert(clkdiv >= 1.0f && clkdiv < 65536.0f, "WS2812 PIO divider out of range for SYS_CLK_HZ");
+    sm_config_set_clkdiv(&c, clkdiv);
 
     pio_sm_init(pio, sm, offset, &c);
     pio_sm_set_enabled(pio, sm, true);
