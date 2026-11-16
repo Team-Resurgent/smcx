@@ -1,4 +1,4 @@
-# Original XBOX Pico SMC
+# SMCX
 
 Original XBOX SMC implemented with a Rapsberry Pico.
 
